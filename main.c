@@ -81,8 +81,9 @@ int main(int argc, char *argv[]) {
     fclose(fp);
 
     int pc = 0;
-    uint16_t foo;
-    uint16_t bar;
+    // TODO: these should be pushed onto a stack.
+    uint16_t a;
+    uint16_t b;
     bool debug = true;
     while (true) {
         val low_byte = memory[pc];
@@ -94,21 +95,21 @@ int main(int argc, char *argv[]) {
             case OPCODE_HALT: // 0
                 return 0;
             case OPCODE_JMP: // 6
-                foo = (uint16_t) memory[pc + 2] + (((uint16_t) memory[pc + 3]) << 8);
-                pc = 2 * foo;
+                a = (uint16_t) memory[pc + 2] + (((uint16_t) memory[pc + 3]) << 8);
+                pc = 2 * a;
                 break;
             case OPCODE_JT: // 7
-                foo = (uint16_t) memory[pc + 2] + (((uint16_t) memory[pc + 3]) << 8);
-                bar = (uint16_t) memory[pc + 4] + (((uint16_t) memory[pc + 5]) << 8);
-                if (foo != 0) {
-                    pc = 2 * bar;
+                a = (uint16_t) memory[pc + 2] + (((uint16_t) memory[pc + 3]) << 8);
+                b = (uint16_t) memory[pc + 4] + (((uint16_t) memory[pc + 5]) << 8);
+                if (a != 0) {
+                    pc = 2 * b;
                 } else {
                     pc = pc + 6;
                 }
                 break;
             case OPCODE_OUT: // 19
-                foo = (uint16_t) memory[pc + 2] + (((uint16_t) memory[pc + 3]) << 8);
-                printf("%c", foo);
+                a = (uint16_t) memory[pc + 2] + (((uint16_t) memory[pc + 3]) << 8);
+                printf("%c", a);
                 pc = pc + 4;
                 break;
             case OPCODE_NOOP: // 21
