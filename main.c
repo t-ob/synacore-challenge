@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include "opcodes.h"
 
 typedef struct _number _register;
 typedef uint8_t val;
@@ -78,13 +79,15 @@ int main(int argc, char *argv[]) {
         uint16_t v = low_byte + (((uint16_t)  high_byte) << 8);
 
         switch (v) {
-            case 0x15:
-                pc = pc + 2;
-                break;
-            case 0x13:
+            case OPCODE_HALT:
+                return 0;
+            case OPCODE_OUT:
                 foo = (uint16_t) memory[pc + 2] + (((uint16_t) memory[pc + 2]) << 8);
                 printf("%c", foo);
                 pc = pc + 4;
+                break;
+            case OPCODE_NOOP:
+                pc = pc + 2;
                 break;
             default:
                 return 1;
