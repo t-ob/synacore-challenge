@@ -52,6 +52,9 @@ void free_memory(val* memory) {
     free(memory);
 }
 
+uint16_t uint16_at(val* memory, uint16_t address) {
+    return (uint16_t) memory[address] + (((uint16_t) memory[address + 1]) << 8);
+}
 
 int main(int argc, char *argv[]) {
     if (argc != 2) {
@@ -95,12 +98,12 @@ int main(int argc, char *argv[]) {
             case OPCODE_HALT: // 0
                 return 0;
             case OPCODE_JMP: // 6
-                a = (uint16_t) memory[pc + 2] + (((uint16_t) memory[pc + 3]) << 8);
+                a = uint16_at(memory, pc + 2);
                 pc = 2 * a;
                 break;
             case OPCODE_JT: // 7
-                a = (uint16_t) memory[pc + 2] + (((uint16_t) memory[pc + 3]) << 8);
-                b = (uint16_t) memory[pc + 4] + (((uint16_t) memory[pc + 5]) << 8);
+                a = uint16_at(memory, pc + 2);
+                b = uint16_at(memory, pc + 4);
                 if (a != 0) {
                     pc = 2 * b;
                 } else {
@@ -108,7 +111,7 @@ int main(int argc, char *argv[]) {
                 }
                 break;
             case OPCODE_OUT: // 19
-                a = (uint16_t) memory[pc + 2] + (((uint16_t) memory[pc + 3]) << 8);
+                a = uint16_at(memory, pc + 2);
                 printf("%c", a);
                 pc = pc + 4;
                 break;
