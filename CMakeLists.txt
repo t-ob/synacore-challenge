@@ -3,5 +3,5 @@ project(synacore)
 
 set(CMAKE_C_STANDARD 99)
 
-set(SOURCE_FILES main.c operations.c operations.h)
+set(SOURCE_FILES main.c opcodes.h)
 add_executable(synacore ${SOURCE_FILES})
