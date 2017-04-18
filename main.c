@@ -7,36 +7,6 @@
 typedef uint8_t val;
 typedef uint16_t address;
 
-struct stack {
-    val value;
-    struct stack* next;
-};
-
-void stack_push(struct stack *s, val v) {
-    struct stack* tmp = malloc(sizeof(struct stack));
-    tmp->next = s->next;
-    tmp->value = s->value;
-    s->value = v;
-    s->next = tmp;
-}
-
-val stack_pop(struct stack *s) {
-    val tmp = s->value;
-    // TODO: clear up node?
-    s = s->next;
-
-    return tmp;
-}
-
-val stack_peek(struct stack *s) {
-    return s->value;
-}
-
-struct stack* init_stack() {
-    struct stack* s = malloc(sizeof(struct stack));
-    return s;
-}
-
 val* init_memory() {
     val* memory = malloc(sizeof(val) * (1 << 16));
     // TODO: zero memory?
@@ -81,7 +51,6 @@ int main(int argc, char *argv[]) {
     }
 
     val* memory = init_memory();
-    struct stack* stack = init_stack();
 
     // Load program into memory.
     FILE *fp;
