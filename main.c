@@ -47,10 +47,29 @@ void free_memory(val* memory) {
     free(memory);
 }
 
+// TODO: better name and register resolve logic
+uint16_t uint16_no_resolve_at(val* memory, address address) {
+    if (0x8000 <= address && address < 0x8010)
+        address = 0x8000 + 2 * (address - 0x8000);
+
+    uint16_t val = (uint16_t) memory[address]
+                   + (((uint16_t) memory[address + 1]) << 8);
+
+    if (0x8000 <= val && val < 0x8010)
+        val = 0x8000 + 2 * (val - 0x8000);
+
+    return val;
+}
+
 uint16_t uint16_at(val* memory, address address) {
+    if (0x8000 <= address && address < 0x8010)
+        address = 0x8000 + 2 * (address - 0x8000);
     uint16_t val = (uint16_t) memory[address] + (((uint16_t) memory[address + 1]) << 8);
-    if (val >= 0x8000)
-        val = (uint16_t) memory[val] + (((uint16_t) memory[val + 1]) << 8);
+    if (val >= 0x8000 && val < 0x8010) {
+        val = 0x8000 + 2 * (val - 0x8000);
+        val = (uint16_t) memory[val]
+              + (((uint16_t) memory[val + 1]) << 8);
+    }
 
     return val;
 }
@@ -67,31 +86,83 @@ int main(int argc, char *argv[]) {
     // Load program into memory.
     FILE *fp;
     fp = fopen(argv[1], "r");
-    fread(memory, sizeof(val), 1 << 16, fp);
+    fread(memory, sizeof(val), 1 << 15, fp); // TODO: What about the rest?
     fclose(fp);
 
-    printf("%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n",
-           uint16_at(memory, 0x8000),
-           uint16_at(memory, 0x8001),
-           uint16_at(memory, 0x8002),
-           uint16_at(memory, 0x8003),
-           uint16_at(memory, 0x8004),
-           uint16_at(memory, 0x8005),
-           uint16_at(memory, 0x8006),
-           uint16_at(memory, 0x8007));
+    // Zero registers?
+    for (int i = 0x8000; i < 0x8010; ++i)
+        memory[i] = 0;
 
     address pc = 0;
+    address sc = 0x8010;
     // TODO: these should be pushed onto a stack.
     uint16_t a;
     uint16_t b;
+    uint16_t c;
+    uint16_t v;
+    uint16_t last_v;
     while (true) {
-        uint16_t v = uint16_at(memory, pc);
+        if (pc != 0)
+            last_v = v;
+        v = uint16_at(memory, pc);
+
+        uint16_t r0 = uint16_at(memory, 0x8000);
+        uint16_t r1 = uint16_at(memory, 0x8001);
 
         switch (v) {
             case OPCODE_HALT: // 0
                 free_memory(memory);
 
                 return 0;
+            case OPCODE_SET: // 1
+                a = uint16_no_resolve_at(memory, pc + (address) 2);
+                b = uint16_at(memory, pc + (address) 4);
+
+                memory[a] = (val) (b & 0xFF);
+                memory[a + 1] = (val) ((b >> 8) & 0xFF);
+
+                pc = pc + (address) 6;
+                break;
+            case OPCODE_PUSH: // 2
+                a = uint16_at(memory, pc + (address) 2);
+
+                memory[sc] = (val) (a & 0xFF);
+                memory[sc + 1] = (val) ((a >> 8) & 0xFF);
+
+                sc = sc + (address) 2;
+                pc = pc + (address) 4;
+                break;
+            case OPCODE_POP: // 3
+                if (sc == 0x8010) {
+                    printf("FATAL ERROR: empty stack\n");
+                    return 1;
+                }
+                a = uint16_no_resolve_at(memory, pc + (address) 2);
+                b = uint16_at(memory, sc - (address) 2);
+
+                memory[a] = (val) (b & 0xFF);
+                memory[a + 1] = (val) ((b >> 8) & 0xFF);
+
+                sc = sc - (address) 2;
+                pc = pc + (address) 4;
+                break;
+            case OPCODE_EQ: // 4
+                a = uint16_no_resolve_at(memory, pc + (address) 2);
+                b = uint16_at(memory, pc + (address) 4);
+                c = uint16_at(memory, pc + (address) 6);
+                
+                if (b == c) {
+                    memory[a] = (val) 1;
+                    memory[a + 1] = (val) 0;
+                } else {
+                    memory[a] = (val) 0;
+                    memory[a + 1] = (val) 0;
+                }
+
+                uint16_t foo = uint16_at(memory, a);
+
+                pc = pc + (address) 8;
+                break;
             case OPCODE_JMP: // 6
                 a = uint16_at(memory, pc + (address) 2);
                 pc = (address) 2 * a;
@@ -116,6 +187,18 @@ int main(int argc, char *argv[]) {
                     pc = pc + (address) 6;
                 }
                 break;
+            case OPCODE_ADD: // 9
+                a = uint16_no_resolve_at(memory, pc + (address) 2);
+                b = uint16_at(memory, pc + (address) 4);
+                c = uint16_at(memory, pc + (address) 6);
+
+                uint16_t sum = (uint16_t) ((b + c) % 0x8000);
+
+                memory[a] = (val) (sum & 0xFF);
+                memory[a + 1] = (val) ((sum >> 8) & 0xFF);
+
+                pc = pc + (address) 8;
+                break;
             case OPCODE_OUT: // 19
                 a = uint16_at(memory, pc + (address) 2);
                 printf("%c", a);
@@ -125,7 +208,7 @@ int main(int argc, char *argv[]) {
                 pc = pc + (address) 2;
                 break;
             default:
-                printf("NOT IMPLEMENTED: %d\n", v);
+                printf("NOT IMPLEMENTED: %d\t(%x)\n", v, pc);
                 return 1;
         }
     }
