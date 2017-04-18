@@ -150,7 +150,7 @@ int main(int argc, char *argv[]) {
                 a = uint16_no_resolve_at(memory, pc + (address) 2);
                 b = uint16_at(memory, pc + (address) 4);
                 c = uint16_at(memory, pc + (address) 6);
-                
+
                 if (b == c) {
                     memory[a] = (val) 1;
                     memory[a + 1] = (val) 0;
@@ -159,7 +159,20 @@ int main(int argc, char *argv[]) {
                     memory[a + 1] = (val) 0;
                 }
 
-                uint16_t foo = uint16_at(memory, a);
+                pc = pc + (address) 8;
+                break;
+            case OPCODE_GT:
+                a = uint16_no_resolve_at(memory, pc + (address) 2);
+                b = uint16_at(memory, pc + (address) 4);
+                c = uint16_at(memory, pc + (address) 6);
+
+                if (b > c) {
+                    memory[a] = (val) 1;
+                    memory[a + 1] = (val) 0;
+                } else {
+                    memory[a] = (val) 0;
+                    memory[a + 1] = (val) 0;
+                }
 
                 pc = pc + (address) 8;
                 break;
@@ -198,6 +211,41 @@ int main(int argc, char *argv[]) {
                 memory[a + 1] = (val) ((sum >> 8) & 0xFF);
 
                 pc = pc + (address) 8;
+                break;
+            case OPCODE_AND: // 12
+                a = uint16_no_resolve_at(memory, pc + (address) 2);
+                b = uint16_at(memory, pc + (address) 4);
+                c = uint16_at(memory, pc + (address) 6);
+
+                uint16_t and = b & c;
+
+                memory[a] = (val) (and & 0xFF);
+                memory[a + 1] = (val) ((and >> 8) & 0xFF);
+
+                pc = pc + (address) 8;
+                break;
+            case OPCODE_OR: // 13
+                a = uint16_no_resolve_at(memory, pc + (address) 2);
+                b = uint16_at(memory, pc + (address) 4);
+                c = uint16_at(memory, pc + (address) 6);
+
+                uint16_t or = b | c;
+
+                memory[a] = (val) (or & 0xFF);
+                memory[a + 1] = (val) ((or >> 8) & 0xFF);
+
+                pc = pc + (address) 8;
+                break;
+            case OPCODE_NOT: // 14
+                a = uint16_no_resolve_at(memory, pc + (address) 2);
+                b = uint16_at(memory, pc + (address) 4);
+
+                uint16_t not = (~b) & 0x7FFF;
+
+                memory[a] = (val) (not & 0xFF);
+                memory[a + 1] = (val) ((not >> 8) & 0xFF);
+
+                pc = pc + (address) 6;
                 break;
             case OPCODE_OUT: // 19
                 a = uint16_at(memory, pc + (address) 2);
