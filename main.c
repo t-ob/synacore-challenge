@@ -130,7 +130,7 @@ int main(int argc, char *argv[]) {
 
                 pc = pc + (address) 8;
                 break;
-            case OPCODE_GT:
+            case OPCODE_GT: // 5
                 a = uint16_no_resolve_at(memory, pc + (address) 2);
                 b = uint16_at(memory, pc + (address) 4);
                 c = uint16_at(memory, pc + (address) 6);
@@ -215,6 +215,17 @@ int main(int argc, char *argv[]) {
                 memory[a + 1] = (val) ((not >> 8) & 0xFF);
 
                 pc = pc + (address) 6;
+                break;
+            case OPCODE_CALL: // 17
+                a = uint16_at(memory, pc + (address) 2);
+
+                address next_address = pc + (address) 4;
+
+                memory[sc] = (next_address / 2) & 0xFF;
+                memory[sc + 1] = ((next_address / 2) >> 8) & 0xFF;
+
+                sc = sc + (address) 2;
+                pc = (address) 2 * a;
                 break;
             case OPCODE_OUT: // 19
                 a = uint16_at(memory, pc + (address) 2);
