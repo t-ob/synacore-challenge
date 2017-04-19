@@ -174,7 +174,7 @@ int main(int argc, char *argv[]) {
                 b = uint16_at(memory, pc + (address) 4);
                 c = uint16_at(memory, pc + (address) 6);
 
-                uint16_t sum = (uint16_t) ((b + c) % 0x8000);
+                uint16_t sum = (uint16_t) ((b + c) & 0x7FFF);
 
                 memory[a] = (val) (sum & 0xFF);
                 memory[a + 1] = (val) ((sum >> 8) & 0xFF);
