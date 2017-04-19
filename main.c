@@ -181,6 +181,30 @@ int main(int argc, char *argv[]) {
 
                 pc = pc + (address) 8;
                 break;
+            case OPCODE_MULT: // 10
+                a = uint16_no_resolve_at(memory, pc + (address) 2);
+                b = uint16_at(memory, pc + (address) 4);
+                c = uint16_at(memory, pc + (address) 6);
+
+                uint16_t product = (uint16_t) ((b * c) & 0x7FFF);
+
+                memory[a] = (val) (product & 0xFF);
+                memory[a + 1] = (val) ((product >> 8) & 0xFF);
+
+                pc = pc + (address) 8;
+                break;
+            case OPCODE_MOD: // 11
+                a = uint16_no_resolve_at(memory, pc + (address) 2);
+                b = uint16_at(memory, pc + (address) 4);
+                c = uint16_at(memory, pc + (address) 6);
+
+                uint16_t remainder = (uint16_t) ((b % c) & 0x7FFF);
+
+                memory[a] = (val) (remainder & 0xFF);
+                memory[a + 1] = (val) ((remainder >> 8) & 0xFF);
+
+                pc = pc + (address) 8;
+                break;
             case OPCODE_AND: // 12
                 a = uint16_no_resolve_at(memory, pc + (address) 2);
                 b = uint16_at(memory, pc + (address) 4);
