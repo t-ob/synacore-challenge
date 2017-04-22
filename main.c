@@ -80,9 +80,6 @@ int main(int argc, char *argv[]) {
             last_v = v;
         v = read_uint16(memory, pc);
 
-        uint16_t r0 = read_uint16(memory, 0x8000);
-        uint16_t r1 = read_uint16(memory, 0x8001);
-
         switch (v) {
             case OPCODE_HALT: // 0
                 free_memory(memory);
@@ -236,7 +233,7 @@ int main(int argc, char *argv[]) {
                 a = read_uint16_no_resolve(memory, pc + (address) 2);
                 b = read_uint16(memory, pc + (address) 4);
 
-                int rmem_val = read_uint16(memory, 2 * b);
+                uint16_t rmem_val = read_uint16(memory, (address) 2 * b);
 
                 write_uint16(memory, a, rmem_val);
 
@@ -268,7 +265,7 @@ int main(int argc, char *argv[]) {
                     return 1;
                 }
                 a = read_uint16_no_resolve(memory, sc - (address) 2);
-                pc = 2 * read_uint16_no_resolve(memory, sc - (address) 2);
+                pc = (address) (2 * a);
 
                 sc = sc - (address) 2;
                 break;
