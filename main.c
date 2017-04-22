@@ -18,30 +18,35 @@ void free_memory(val* memory) {
 }
 
 // TODO: better name and register resolve logic
-uint16_t uint16_no_resolve_at(val* memory, address address) {
-    if (0x8000 <= address && address < 0x8010)
-        address = 0x8000 + 2 * (address - 0x8000);
+uint16_t read_uint16_no_resolve(val *memory, address addr) {
+    if (0x8000 <= addr && addr < 0x8010)
+        addr = (address) (0x8000 + 2 * (addr - 0x8000));
 
-    uint16_t val = (uint16_t) memory[address]
-                   + (((uint16_t) memory[address + 1]) << 8);
+    uint16_t val = (uint16_t) memory[addr]
+                   + (((uint16_t) memory[addr + 1]) << 8);
 
     if (0x8000 <= val && val < 0x8010)
-        val = 0x8000 + 2 * (val - 0x8000);
+        val = (uint16_t) (0x8000 + 2 * (val - 0x8000));
 
     return val;
 }
 
-uint16_t uint16_at(val* memory, address address) {
-    if (0x8000 <= address && address < 0x8010)
-        address = 0x8000 + 2 * (address - 0x8000);
-    uint16_t val = (uint16_t) memory[address] + (((uint16_t) memory[address + 1]) << 8);
+uint16_t read_uint16(val *memory, address addr) {
+    if (0x8000 <= addr && addr < 0x8010)
+        addr = (address) (0x8000 + 2 * (addr - 0x8000));
+    uint16_t val = (uint16_t) memory[addr] + (((uint16_t) memory[addr + 1]) << 8);
     if (val >= 0x8000 && val < 0x8010) {
-        val = 0x8000 + 2 * (val - 0x8000);
+        val = (address) (0x8000 + 2 * (val - 0x8000));
         val = (uint16_t) memory[val]
               + (((uint16_t) memory[val + 1]) << 8);
     }
 
     return val;
+}
+
+void write_uint16(val *memory, address address, uint16_t value) {
+    memory[address] = (val) (value & 0xFF);
+    memory[address + 1] = (val) ((value >> 8) & 0xFF);
 }
 
 int main(int argc, char *argv[]) {
@@ -73,10 +78,10 @@ int main(int argc, char *argv[]) {
     while (true) {
         if (pc != 0)
             last_v = v;
-        v = uint16_at(memory, pc);
+        v = read_uint16(memory, pc);
 
-        uint16_t r0 = uint16_at(memory, 0x8000);
-        uint16_t r1 = uint16_at(memory, 0x8001);
+        uint16_t r0 = read_uint16(memory, 0x8000);
+        uint16_t r1 = read_uint16(memory, 0x8001);
 
         switch (v) {
             case OPCODE_HALT: // 0
@@ -84,19 +89,17 @@ int main(int argc, char *argv[]) {
 
                 return 0;
             case OPCODE_SET: // 1
-                a = uint16_no_resolve_at(memory, pc + (address) 2);
-                b = uint16_at(memory, pc + (address) 4);
+                a = read_uint16_no_resolve(memory, pc + (address) 2);
+                b = read_uint16(memory, pc + (address) 4);
 
-                memory[a] = (val) (b & 0xFF);
-                memory[a + 1] = (val) ((b >> 8) & 0xFF);
+                write_uint16(memory, a, b);
 
                 pc = pc + (address) 6;
                 break;
             case OPCODE_PUSH: // 2
-                a = uint16_at(memory, pc + (address) 2);
+                a = read_uint16(memory, pc + (address) 2);
 
-                memory[sc] = (val) (a & 0xFF);
-                memory[sc + 1] = (val) ((a >> 8) & 0xFF);
+                write_uint16(memory, sc, a);
 
                 sc = sc + (address) 2;
                 pc = pc + (address) 4;
@@ -106,52 +109,47 @@ int main(int argc, char *argv[]) {
                     printf("FATAL ERROR: empty stack\n");
                     return 1;
                 }
-                a = uint16_no_resolve_at(memory, pc + (address) 2);
-                b = uint16_at(memory, sc - (address) 2);
+                a = read_uint16_no_resolve(memory, pc + (address) 2);
+                b = read_uint16(memory, sc - (address) 2);
 
-                memory[a] = (val) (b & 0xFF);
-                memory[a + 1] = (val) ((b >> 8) & 0xFF);
+                write_uint16(memory, a, b);
 
                 sc = sc - (address) 2;
                 pc = pc + (address) 4;
                 break;
             case OPCODE_EQ: // 4
-                a = uint16_no_resolve_at(memory, pc + (address) 2);
-                b = uint16_at(memory, pc + (address) 4);
-                c = uint16_at(memory, pc + (address) 6);
+                a = read_uint16_no_resolve(memory, pc + (address) 2);
+                b = read_uint16(memory, pc + (address) 4);
+                c = read_uint16(memory, pc + (address) 6);
 
                 if (b == c) {
-                    memory[a] = (val) 1;
-                    memory[a + 1] = (val) 0;
+                    write_uint16(memory, a, 1);
                 } else {
-                    memory[a] = (val) 0;
-                    memory[a + 1] = (val) 0;
+                    write_uint16(memory, a, 0);
                 }
 
                 pc = pc + (address) 8;
                 break;
             case OPCODE_GT: // 5
-                a = uint16_no_resolve_at(memory, pc + (address) 2);
-                b = uint16_at(memory, pc + (address) 4);
-                c = uint16_at(memory, pc + (address) 6);
+                a = read_uint16_no_resolve(memory, pc + (address) 2);
+                b = read_uint16(memory, pc + (address) 4);
+                c = read_uint16(memory, pc + (address) 6);
 
                 if (b > c) {
-                    memory[a] = (val) 1;
-                    memory[a + 1] = (val) 0;
+                    write_uint16(memory, a, 1);
                 } else {
-                    memory[a] = (val) 0;
-                    memory[a + 1] = (val) 0;
+                    write_uint16(memory, a, 0);
                 }
 
                 pc = pc + (address) 8;
                 break;
             case OPCODE_JMP: // 6
-                a = uint16_at(memory, pc + (address) 2);
+                a = read_uint16(memory, pc + (address) 2);
                 pc = (address) 2 * a;
                 break;
             case OPCODE_JT: // 7
-                a = uint16_at(memory, pc + (address) 2);
-                b = uint16_at(memory, pc + (address) 4);
+                a = read_uint16(memory, pc + (address) 2);
+                b = read_uint16(memory, pc + (address) 4);
 
                 if (a != 0) {
                     pc = (address) 2 * b;
@@ -160,8 +158,8 @@ int main(int argc, char *argv[]) {
                 }
                 break;
             case OPCODE_JF: // 8
-                a = uint16_at(memory, pc + (address) 2);
-                b = uint16_at(memory, pc + (address) 4);
+                a = read_uint16(memory, pc + (address) 2);
+                b = read_uint16(memory, pc + (address) 4);
 
                 if (a == 0) {
                     pc = (address) 2 * b;
@@ -170,89 +168,112 @@ int main(int argc, char *argv[]) {
                 }
                 break;
             case OPCODE_ADD: // 9
-                a = uint16_no_resolve_at(memory, pc + (address) 2);
-                b = uint16_at(memory, pc + (address) 4);
-                c = uint16_at(memory, pc + (address) 6);
+                a = read_uint16_no_resolve(memory, pc + (address) 2);
+                b = read_uint16(memory, pc + (address) 4);
+                c = read_uint16(memory, pc + (address) 6);
 
                 uint16_t sum = (uint16_t) ((b + c) & 0x7FFF);
 
-                memory[a] = (val) (sum & 0xFF);
-                memory[a + 1] = (val) ((sum >> 8) & 0xFF);
+                write_uint16(memory, a, sum);
 
                 pc = pc + (address) 8;
                 break;
             case OPCODE_MULT: // 10
-                a = uint16_no_resolve_at(memory, pc + (address) 2);
-                b = uint16_at(memory, pc + (address) 4);
-                c = uint16_at(memory, pc + (address) 6);
+                a = read_uint16_no_resolve(memory, pc + (address) 2);
+                b = read_uint16(memory, pc + (address) 4);
+                c = read_uint16(memory, pc + (address) 6);
 
                 uint16_t product = (uint16_t) ((b * c) & 0x7FFF);
 
-                memory[a] = (val) (product & 0xFF);
-                memory[a + 1] = (val) ((product >> 8) & 0xFF);
+                write_uint16(memory, a, product);
 
                 pc = pc + (address) 8;
                 break;
             case OPCODE_MOD: // 11
-                a = uint16_no_resolve_at(memory, pc + (address) 2);
-                b = uint16_at(memory, pc + (address) 4);
-                c = uint16_at(memory, pc + (address) 6);
+                a = read_uint16_no_resolve(memory, pc + (address) 2);
+                b = read_uint16(memory, pc + (address) 4);
+                c = read_uint16(memory, pc + (address) 6);
 
                 uint16_t remainder = (uint16_t) ((b % c) & 0x7FFF);
 
-                memory[a] = (val) (remainder & 0xFF);
-                memory[a + 1] = (val) ((remainder >> 8) & 0xFF);
+                write_uint16(memory, a, remainder);
 
                 pc = pc + (address) 8;
                 break;
             case OPCODE_AND: // 12
-                a = uint16_no_resolve_at(memory, pc + (address) 2);
-                b = uint16_at(memory, pc + (address) 4);
-                c = uint16_at(memory, pc + (address) 6);
+                a = read_uint16_no_resolve(memory, pc + (address) 2);
+                b = read_uint16(memory, pc + (address) 4);
+                c = read_uint16(memory, pc + (address) 6);
 
                 uint16_t and = b & c;
 
-                memory[a] = (val) (and & 0xFF);
-                memory[a + 1] = (val) ((and >> 8) & 0xFF);
+                write_uint16(memory, a, and);
 
                 pc = pc + (address) 8;
                 break;
             case OPCODE_OR: // 13
-                a = uint16_no_resolve_at(memory, pc + (address) 2);
-                b = uint16_at(memory, pc + (address) 4);
-                c = uint16_at(memory, pc + (address) 6);
+                a = read_uint16_no_resolve(memory, pc + (address) 2);
+                b = read_uint16(memory, pc + (address) 4);
+                c = read_uint16(memory, pc + (address) 6);
 
                 uint16_t or = b | c;
 
-                memory[a] = (val) (or & 0xFF);
-                memory[a + 1] = (val) ((or >> 8) & 0xFF);
+                write_uint16(memory, a, or);
 
                 pc = pc + (address) 8;
                 break;
             case OPCODE_NOT: // 14
-                a = uint16_no_resolve_at(memory, pc + (address) 2);
-                b = uint16_at(memory, pc + (address) 4);
+                a = read_uint16_no_resolve(memory, pc + (address) 2);
+                b = read_uint16(memory, pc + (address) 4);
 
-                uint16_t not = (~b) & 0x7FFF;
+                uint16_t not = (uint16_t) ((~b) & 0x7FFF);
 
-                memory[a] = (val) (not & 0xFF);
-                memory[a + 1] = (val) ((not >> 8) & 0xFF);
+                write_uint16(memory, a, not);
+
+                pc = pc + (address) 6;
+                break;
+            case OPCODE_RMEM: // 15
+                a = read_uint16_no_resolve(memory, pc + (address) 2);
+                b = read_uint16(memory, pc + (address) 4);
+
+                int rmem_val = read_uint16(memory, 2 * b);
+
+                write_uint16(memory, a, rmem_val);
+
+                pc = pc + (address) 6;
+                break;
+            case OPCODE_WMEM: // 16
+                a = read_uint16(memory, pc + (address) 2);
+                b = read_uint16_no_resolve(memory, pc + (address) 4);
+
+                address rmem_addr = (address) 2 * a;
+
+                write_uint16(memory, rmem_addr, b);
 
                 pc = pc + (address) 6;
                 break;
             case OPCODE_CALL: // 17
-                a = uint16_at(memory, pc + (address) 2);
+                a = read_uint16(memory, pc + (address) 2);
 
-                address next_address = pc + (address) 4;
+                address next_address = (address) ((pc + 4) / 2);
 
-                memory[sc] = (next_address / 2) & 0xFF;
-                memory[sc + 1] = ((next_address / 2) >> 8) & 0xFF;
+                write_uint16(memory, sc, next_address);
 
                 sc = sc + (address) 2;
                 pc = (address) 2 * a;
                 break;
+            case OPCODE_RET: // 18
+                if (sc == 0x8010) {
+                    printf("FATAL ERROR: empty stack\n");
+                    return 1;
+                }
+                a = read_uint16_no_resolve(memory, sc - (address) 2);
+                pc = 2 * read_uint16_no_resolve(memory, sc - (address) 2);
+
+                sc = sc - (address) 2;
+                break;
             case OPCODE_OUT: // 19
-                a = uint16_at(memory, pc + (address) 2);
+                a = read_uint16(memory, pc + (address) 2);
                 printf("%c", a);
                 pc = pc + (address) 4;
                 break;
