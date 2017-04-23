@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <stdbool.h>
 #include "operations.h"
 
 typedef uint8_t val;
@@ -50,7 +49,7 @@ int main(int argc, char *argv[]) {
     uint16_t b;
     uint16_t c;
     uint16_t v;
-    while (true) {
+    while (1) {
         v = read_uint16(memory, pc);
 
         switch (v) {
