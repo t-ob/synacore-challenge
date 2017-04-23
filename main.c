@@ -9,7 +9,6 @@ typedef uint32_t address;
 
 val* init_memory(size_t size) {
     val* memory = malloc(size);
-    // TODO: zero memory?
     return memory;
 }
 
@@ -19,43 +18,6 @@ void free_memory(val* memory) {
 
 uint16_t read_uint16(val *memory, address addr) {
     uint16_t val = (uint16_t) memory[addr] + (((uint16_t) memory[addr + 1]) << 8);
-
-//    if (0x8000 <= val && val < 0x8008) {
-//        addr = 2 * (address) val;
-//        val = (uint16_t) memory[addr] + (((uint16_t) memory[addr + 1]) << 8);
-//    }
-
-    return val;
-}
-
-address resolve_register(val *memory, address r0_addr, address addr) {
-    uint16_t val = read_uint16(memory, addr);
-    if (!((val >= 0x8000) && (val < 0x8010))) {
-        printf("BAD REGISTER\n");
-        return ~((address) 0);
-    }
-
-    return r0_addr + 2 * val;
-}
-
-// TODO: is this always a register?
-uint16_t read_uint16_no_resolve(val *memory, address addr) {
-//    if (0x8000 <= addr && addr < 0x8010)
-//        addr = (address) (0x8000 + 2 * (addr - 0x8000));
-//
-//    uint16_t val = (uint16_t) memory[addr]
-//                   + (((uint16_t) memory[addr + 1]) << 8);
-//
-//    if (0x8000 <= val && val < 0x8010)
-//        val = (uint16_t) (0x8000 + 2 * (val - 0x8000));
-//
-//    return val;
-    uint16_t val = (uint16_t) memory[addr] + (((uint16_t) memory[addr + 1]) << 8);
-
-    if (0x8000 <= val && val < 0x8008) {
-        addr = 2 * (address) val;
-        val = (uint16_t) memory[addr] + (((uint16_t) memory[addr + 1]) << 8);
-    }
 
     return val;
 }
@@ -79,14 +41,11 @@ int main(int argc, char *argv[]) {
     fread(memory, sizeof(val), 1 << 16, fp);
     fclose(fp);
 
-    // Zero registers?
-    for (int i = 0x10000; i < 0x10010; ++i)
-        memory[i] = 0;
-
+    // Init addresses of program counter, r0 and stack counter.
     address pc = 0;
     address r0 = 0x10000;
     address sc = 0x10010;
-    // TODO: these should be pushed onto a stack.
+
     uint16_t a;
     uint16_t b;
     uint16_t c;
@@ -95,25 +54,20 @@ int main(int argc, char *argv[]) {
         v = read_uint16(memory, pc);
 
         switch (v) {
-                case OPCODE_HALT: // 0
-                    free_memory(memory);
+            case OPCODE_HALT: // 0
+                free_memory(memory);
 
-                    return 0;
+                return 0;
             case OPCODE_SET: // 1
-            {
-                uint16_t set_a;
-                set_a = read_uint16(memory, pc + (address) 2);
-                if (set_a < 0x8000 || set_a >= 0x8008)
-                    printf("ERROR SET\n");
+                a = read_uint16(memory, pc + (address) 2);
                 b = read_uint16(memory, pc + (address) 4);
                 if (b >= 0x8000 && b < 0x8008)
                     b = read_uint16(memory, r0 + 2 * (b - 0x8000));
 
-                write_uint16(memory, r0 + 2 * (set_a - 0x8000), b);
+                write_uint16(memory, r0 + 2 * (a - 0x8000), b);
 
                 pc = pc + (address) 6;
                 break;
-            }
             case OPCODE_PUSH: // 2
                 a = read_uint16(memory, pc + (address) 2);
                 if (a >= 0x8000 && a < 0x8008)
@@ -130,8 +84,6 @@ int main(int argc, char *argv[]) {
                     return 1;
                 }
                 a = read_uint16(memory, pc + (address) 2);
-                if (a < 0x8000 || a >= 0x8008)
-                    printf("ERROR POP\n");
                 b = read_uint16(memory, sc - (address) 2);
 
                 write_uint16(memory, r0 + 2 * (a - 0x8000), b);
@@ -141,8 +93,6 @@ int main(int argc, char *argv[]) {
                 break;
             case OPCODE_EQ: // 4
                 a = read_uint16(memory, pc + (address) 2);
-                if (a < 0x8000 || a >= 0x8008)
-                    printf("ERROR EQ\n");
                 b = read_uint16(memory, pc + (address) 4);
                 if (b >= 0x8000 && b < 0x8008)
                     b = read_uint16(memory, r0 + 2 * (b - 0x8000));
@@ -160,8 +110,6 @@ int main(int argc, char *argv[]) {
                 break;
             case OPCODE_GT: // 5
                 a = read_uint16(memory, pc + (address) 2);
-                if (a < 0x8000 || a >= 0x8008)
-                    printf("ERROR GT\n");
                 b = read_uint16(memory, pc + (address) 4);
                 if (b >= 0x8000 && b < 0x8008)
                     b = read_uint16(memory, r0 + 2 * (b - 0x8000));
@@ -213,8 +161,6 @@ int main(int argc, char *argv[]) {
                 break;
             case OPCODE_ADD: // 9
                 a = read_uint16(memory, pc + (address) 2);
-                if (a < 0x8000 || a >= 0x8008)
-                    printf("ERROR ADD\n");
                 b = read_uint16(memory, pc + (address) 4);
                 if (b >= 0x8000 && b < 0x8008)
                     b = read_uint16(memory, r0 + 2 * (b - 0x8000));
@@ -230,8 +176,6 @@ int main(int argc, char *argv[]) {
                 break;
             case OPCODE_MULT: // 10
                 a = read_uint16(memory, pc + (address) 2);
-                if (a < 0x8000 || a >= 0x8008)
-                    printf("ERROR MULT\n");
                 b = read_uint16(memory, pc + (address) 4);
                 if (b >= 0x8000 && b < 0x8008)
                     b = read_uint16(memory, r0 + 2 * (b - 0x8000));
@@ -247,8 +191,6 @@ int main(int argc, char *argv[]) {
                 break;
             case OPCODE_MOD: // 11
                 a = read_uint16(memory, pc + (address) 2);
-                if (a < 0x8000 || a >= 0x8008)
-                    printf("ERROR MOD\n");
                 b = read_uint16(memory, pc + (address) 4);
                 if (b >= 0x8000 && b < 0x8008)
                     b = read_uint16(memory, r0 + 2 * (b - 0x8000));
@@ -264,8 +206,6 @@ int main(int argc, char *argv[]) {
                 break;
             case OPCODE_AND: // 12
                 a = read_uint16(memory, pc + (address) 2);
-                if (a < 0x8000 || a >= 0x8008)
-                    printf("ERROR AND\n");
                 b = read_uint16(memory, pc + (address) 4);
                 if (b >= 0x8000 && b < 0x8008)
                     b = read_uint16(memory, r0 + 2 * (b - 0x8000));
@@ -281,8 +221,6 @@ int main(int argc, char *argv[]) {
                 break;
             case OPCODE_OR: // 13
                 a = read_uint16(memory, pc + (address) 2);
-                if (a < 0x8000 || a >= 0x8008)
-                    printf("ERROR OR\n");
                 b = read_uint16(memory, pc + (address) 4);
                 if (b >= 0x8000 && b < 0x8008)
                     b = read_uint16(memory, r0 + 2 * (b - 0x8000));
@@ -298,8 +236,6 @@ int main(int argc, char *argv[]) {
                 break;
             case OPCODE_NOT: // 14
                 a = read_uint16(memory, pc + (address) 2);
-                if (a < 0x8000 || a >= 0x8008)
-                    printf("ERROR NOT\n");
                 b = read_uint16(memory, pc + (address) 4);
                 if (b >= 0x8000 && b < 0x8008)
                     b = read_uint16(memory, r0 + 2 * (b - 0x8000));
@@ -312,8 +248,6 @@ int main(int argc, char *argv[]) {
                 break;
             case OPCODE_RMEM: // 15
                 a = read_uint16(memory, pc + (address) 2);
-                if (a < 0x8000 || a >= 0x8008)
-                    printf("ERROR RMEM\n");
                 b = read_uint16(memory, pc + (address) 4);
                 if (b >= 0x8000 && b < 0x8008)
                     b = read_uint16(memory, r0 + 2 * (b - 0x8000));
@@ -345,7 +279,7 @@ int main(int argc, char *argv[]) {
                 if (a >= 0x8000 && a < 0x8008)
                     a = read_uint16(memory, r0 + 2 * (a - 0x8000));
 
-                address next_address = (address) ((pc + 4) / 2);
+                uint16_t next_address = (uint16_t) ((pc + 4) / 2);
 
                 write_uint16(memory, sc, next_address);
 
